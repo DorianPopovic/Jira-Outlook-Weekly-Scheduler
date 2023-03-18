@@ -16,7 +16,7 @@ TIMEZONE = pytz.timezone('Europe/Zurich')                                 # Time
 CATEGORY = "Task"                                                         # Color meeting category
 JIRA_DOMAIN = "https://dorianpopovic.atlassian.net/"                      # Insert your Jira workspace/domain here
 JIRA_EMAIL = "contact.dpopovic@gmail.com"                                 # Insert Jira email here (if different from outlook email)
-JIRA_TOKEN = "ATATT3xFfGF0WlbMA034jA_SQP70zGJ8vMmFcPWeXLLH0Ns6yWLMjHz6Dw0kDQCgG9xwIgB50kly06m0ObZQNSBnJvFsd40OuB_QHgFXMyKbS_gi2BPCzlCJkV80hLSr9GOhGUbKeEx_6dn0bhH9Y9GEXEcvZVm4Nlt73sL6dzXS8LFmVD9txd8=2BDE20A5"
+JIRA_TOKEN = ""
 
 # Function to retrieve data from the outlook calendar
 def get_outlook_calendar():
