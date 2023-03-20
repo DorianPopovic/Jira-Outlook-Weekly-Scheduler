@@ -2,6 +2,7 @@ import datetime
 import pytz
 from jira import JIRA
 import win32com.client
+from colorama import Fore, Style
 
 # Constants definition
 EMAIL = "dorian.popovic@hotmail.com"                                      # Insert outlook e-mail here
@@ -16,16 +17,12 @@ TIMEZONE = pytz.timezone('Europe/Zurich')                                 # Time
 CATEGORY = "Task"                                                         # Color meeting category
 JIRA_DOMAIN = "https://dorianpopovic.atlassian.net/"                      # Insert your Jira workspace/domain here
 JIRA_EMAIL = "contact.dpopovic@gmail.com"                                 # Insert Jira email here (if different from outlook email)
-JIRA_TOKEN = ""
+JIRA_TOKEN = "ATATT3xFfGF0Q0NpyozT7dozxtLGgrZC1Km8ILNmKb-AtDKY5juoWxyEimPzrNZj99zzEGtEVMBUmpXD0NEo9Vpk3dzJ3nr3MWdsRRnCnG8PRTWHwaflsamDo-JTYg5V7BChXetD7CKvv4AU2ld94PONpGGPa5g-PgPa2LetKZ8zvj6cDRhye7A=E7AE7CFB"
 
 # Function to retrieve data from the outlook calendar
 def get_outlook_calendar():
         outlook = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
         outlook_calendar = outlook.Folders[EMAIL].Folders[FOLDER] # Retrieve your calendar data
-        #outlook_calendar_items = outlook_calendar_folder.Items
-        #outlook_calendar_items.IncludeRecurrences = True
-        #outlook_calendar_items.Sort("[Start]")
-        #outlook_calendar_items = outlook_calendar_items.Restrict("[Start] >= '" + START_DATE_STR + "' AND [END] <= '" + END_DATE_STR + "'") # Filter calendar for current sprint
         
         return outlook_calendar
     
@@ -36,3 +33,102 @@ def get_jira_issues():
     issues = jira.search_issues(jql)
     
     return issues
+
+def plan_jira_issues(issues, outlook_calendar, sprint_start, workday_start):
+    
+    # Loop through each issue and schedule working hours in the calendar
+    for issue in issues:
+        
+        # Get the estimated time for this issue
+        story_points = issue.fields.customfield_10016
+        estimated_time = story_points * 60  # Convert story points to minutes (easier operations)
+        
+        # Loop through each day of the sprint
+        for day in range(7):
+            date = sprint_start + datetime.timedelta(days=day)
+            
+            # Skip weekends
+            if date.weekday() >= 5:
+                continue
+            
+            # Loop through each hour of the workday
+            for hour in range(9):
+                start_time = datetime.datetime.combine(date, workday_start) + datetime.timedelta(hours=hour)
+                end_time = start_time + datetime.timedelta(minutes=60)
+                
+                start_time_str = start_time.strftime("%Y-%m-%d %H:%M %p")
+                end_time_str = end_time.strftime("%Y-%m-%d %H:%M %p")
+                
+                # Check if this hour is available
+                appointments = outlook_calendar.Items.Restrict("[Start] <= '" + start_time_str + "' AND [End] >= '" + end_time_str + "'")
+                
+                found_appointment = False # Initiliaze to false, weird way of .Restrict to collects items
+                
+                for appointment in appointments:
+                    if appointment.Start <= start_time.replace(tzinfo=pytz.UTC) and appointment.End >= end_time.replace(tzinfo=pytz.UTC):
+                        found_appointment = True
+                        break
+                    
+                if not found_appointment:
+                    
+                    # No appointment found so we can schedule this hour for the current issue
+                    appointment = outlook_calendar.Items.Add()
+                    appointment.Subject = issue.fields.summary
+                    appointment.Start = start_time.replace(tzinfo=pytz.UTC)
+                    appointment.End = start_time.replace(tzinfo=pytz.UTC) + datetime.timedelta(minutes=60)
+                    appointment.Categories = CATEGORY
+                    appointment.BusyStatus = 1 # Tentative
+                    appointment.Save()
+                    
+                    # Subtract this hour from the estimated time
+                    estimated_time -= 60
+                    
+                    # If all time has been scheduled, move on to the next issue
+                    if estimated_time == 0:
+                        break
+                        
+            # If all time has been scheduled, move on to the next issue
+            if estimated_time == 0:
+                break
+
+                
+def clean_calendar():
+    
+    outlook_calendar = get_outlook_calendar()
+    outlook_calendar_items = outlook_calendar.Items
+    previous_item = None
+    items_to_delete = []
+    start_time = None
+    end_time = None
+    meeting_to_update = None
+
+    for item in outlook_calendar_items:
+        if item.Categories == "Task":
+            if previous_item!= None:
+                if item.Subject == previous_item.Subject and item.Start == previous_item.End:
+                    items_to_delete.append(item)
+                    if start_time is None:
+                        # This is the first duplicated task, so set the start time to the start time of this task
+                        start_time = previous_item.Start
+                        meeting_to_update = previous_item
+                    # Update the end time to the end time of the current duplicated task
+                    end_time = item.End
+
+                    if start_time is not None and end_time is not None:
+                        meeting_to_update.Start = start_time
+                        meeting_to_update.End = end_time
+                        meeting_to_update.Save()
+
+                else:
+                    # This is not a duplicated task, so reset the start and end times
+                    start_time = None
+                    end_time = None
+                    meeting_to_update = None
+            previous_item = item
+        else:
+            continue
+
+    for item in items_to_delete:
+        item.Delete()
+    
+    print(Fore.MAGENTA + "Cleaned calendar" + Style.RESET_ALL)
