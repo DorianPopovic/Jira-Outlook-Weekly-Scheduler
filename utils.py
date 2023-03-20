@@ -14,10 +14,10 @@ END_DATE = datetime.datetime.strptime(END_DATE_STR, '%Y-%m-%d %H:%M')     # Date
 WORK_START = datetime.time(hour=8, minute=0)                              # Working hours start for you
 WORK_END = datetime.time(hour=17, minute=0)                               # Working hours end for you
 TIMEZONE = pytz.timezone('Europe/Zurich')                                 # Timezone (not sure it is needed)
-CATEGORY = "Task"                                                         # Color meeting category
+CATEGORY = "Task"                                                         # jira meetings category (create "Task" one or your own and modify accordingly)
 JIRA_DOMAIN = "https://dorianpopovic.atlassian.net/"                      # Insert your Jira workspace/domain here
 JIRA_EMAIL = "contact.dpopovic@gmail.com"                                 # Insert Jira email here (if different from outlook email)
-JIRA_TOKEN = "ATATT3xFfGF0Q0NpyozT7dozxtLGgrZC1Km8ILNmKb-AtDKY5juoWxyEimPzrNZj99zzEGtEVMBUmpXD0NEo9Vpk3dzJ3nr3MWdsRRnCnG8PRTWHwaflsamDo-JTYg5V7BChXetD7CKvv4AU2ld94PONpGGPa5g-PgPa2LetKZ8zvj6cDRhye7A=E7AE7CFB"
+JIRA_TOKEN = ""                                                           # Insert Jira generated token here
 
 # Function to retrieve data from the outlook calendar
 def get_outlook_calendar():
@@ -91,7 +91,7 @@ def plan_jira_issues(issues, outlook_calendar, sprint_start, workday_start):
             if estimated_time == 0:
                 break
 
-                
+# Function to clean calendar and merge consecutively planned meetings                
 def clean_calendar():
     
     outlook_calendar = get_outlook_calendar()
